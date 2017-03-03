@@ -63,6 +63,7 @@ export default class Drawer extends Component {
     tweenHandler: PropTypes.func,
     type: PropTypes.oneOf(['overlay', 'static', 'displace']),
     useInteractionManager: PropTypes.bool,
+    gestureMarginTop: PropTypes.number,
 
     // deprecated
     panStartCompensation: PropTypes.bool,
@@ -79,6 +80,7 @@ export default class Drawer extends Component {
     panThreshold: 0.25, // @TODO consider rename to panThreshold
     panOpenMask: null, // defaults to closedDrawerOffset
     panCloseMask: null, // defaults to openDrawerOffset
+    gestureMarginTop: 0,
 
     tweenHandler: null,
     tweenDuration: 250,
@@ -354,11 +356,15 @@ export default class Drawer extends Component {
     if (this._childDrawer && this._childDrawer._open) return false
 
     let x0 = e.nativeEvent.pageX
+    let y0 = e.nativeEvent.pageY
     let deltaOpen = this.props.side === 'left' ? this.state.viewport.width - x0 : x0
     let deltaClose = this.props.side === 'left' ? x0 : this.state.viewport.width - x0
-
-    if ( this._open && deltaOpen > this.getOpenMask() ) return false
+    
+    if ( this._open && deltaOpen > this.getOpenMask() && y0 > this.props.gestureMarginTop) {
+      return false
+    }
     if ( !this._open && deltaClose > this.getClosedMask() ) return false
+    
     return true
   };
 
@@ -369,7 +375,7 @@ export default class Drawer extends Component {
     }
   };
 
-  open = (type, cb) => {
+  open = (type) => {
     let start = this._left
     let end = this.getOpenLeft()
 
@@ -394,16 +400,11 @@ export default class Drawer extends Component {
         this.adjustForCaptureGestures()
         this.props.onOpen()
         this.clearInteractionHandle()
-
-        if(typeof type === 'function') {
-          type() // this is actually a callback
-        } else cb && cb()
-        
       }
     })
   };
 
-  close = (type, cb) => {
+  close = (type) => {
     let start = this._left
     let end = this.getClosedLeft()
 
@@ -428,11 +429,6 @@ export default class Drawer extends Component {
         this.adjustForCaptureGestures()
         this.props.onClose()
         this.clearInteractionHandle()
-
-        if(typeof type === 'function') {
-          type() // this is actually a callback
-        } else cb && cb()
-
       }
     })
   };
@@ -464,7 +460,7 @@ export default class Drawer extends Component {
     let oldViewport = this.state.viewport
     if (viewport.width === oldViewport.width && viewport.height === oldViewport.height) return
     let didRotationChange = viewport.width !== oldViewport.width
-    this.resync(viewport, null, didRotationChange)
+    setTimeout(this.resync.bind(this, viewport, null, didRotationChange))
   };
 
   resync = (viewport, props, didRotationChange) => {
@@ -501,11 +497,11 @@ export default class Drawer extends Component {
   };
   getOpenOffset = (props, viewport) => {
     if (typeof props.openDrawerOffset === 'function') return props.openDrawerOffset(viewport)
-    return props.openDrawerOffset > 1 || props.openDrawerOffset < 0 ? props.openDrawerOffset : props.openDrawerOffset * viewport.width
+    return props.openDrawerOffset % 1 === 0 ? props.openDrawerOffset : props.openDrawerOffset * viewport.width
   };
   getClosedOffset = (props, viewport) => {
     if (typeof props.closedDrawerOffset === 'function') return props.closedDrawerOffset(viewport)
-    return props.closedDrawerOffset > 1 || props.closedDrawerOffset < 0 ? props.closedDrawerOffset : props.closedDrawerOffset * viewport.width
+    return props.closedDrawerOffset % 1 === 0 ? props.closedDrawerOffset : props.closedDrawerOffset * viewport.width
   };
   /*** END DYNAMIC GETTERS ***/
 
@@ -573,3 +569,4 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent'
   }
 })
+
